@@ -14,15 +14,19 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
 
 body{
 font-family:Arial;
-background:#f4f6f7;
+background:#f1f5f4;
 margin:0;
 }
+
+/* HEADER */
 
 header{
 background:#1B5E20;
 color:white;
 text-align:center;
 padding:20px;
+font-size:20px;
+font-weight:bold;
 }
 
 /* GRID MENU */
@@ -36,24 +40,30 @@ padding:20px;
 
 }
 
-/* UBIN MENU */
+/* ITEM MENU */
 
 .menu-item{
 
 background:white;
-border-radius:12px;
-padding:20px;
+border-radius:15px;
+padding:25px 10px;
 text-align:center;
-box-shadow:0 4px 10px rgba(0,0,0,0.1);
-transition:0.2s;
+box-shadow:0 5px 15px rgba(0,0,0,0.1);
+transition:all 0.3s ease;
+cursor:pointer;
 
 }
+
+/* ANIMASI */
 
 .menu-item:hover{
 
-transform:translateY(-5px);
+transform:translateY(-8px) scale(1.05);
+box-shadow:0 10px 25px rgba(0,0,0,0.2);
 
 }
+
+/* IKON */
 
 .menu-item i{
 
@@ -63,10 +73,31 @@ margin-bottom:10px;
 
 }
 
+/* TEKS */
+
 .menu-item p{
 
 margin:0;
 font-weight:bold;
+font-size:14px;
+
+}
+
+/* RESPONSIVE HP */
+
+@media(max-width:600px){
+
+.menu-item{
+
+padding:20px 5px;
+
+}
+
+.menu-item i{
+
+font-size:30px;
+
+}
 
 }
 
@@ -78,7 +109,7 @@ font-weight:bold;
 
 <header>
 
-<h2>BPP Bola Kabupaten Wajo</h2>
+BPP Bola Kabupaten Wajo
 
 </header>
 
@@ -90,43 +121,43 @@ font-weight:bold;
 </div>
 
 <div class="menu-item">
-<i class="fa-solid fa-seedling"></i>
-<p>Program</p>
-</div>
-
-<div class="menu-item">
 <i class="fa-solid fa-newspaper"></i>
 <p>Berita</p>
 </div>
 
 <div class="menu-item">
-<i class="fa-solid fa-chart-line"></i>
-<p>Data</p>
+<i class="fa-solid fa-circle-info"></i>
+<p>Informasi</p>
 </div>
 
 <div class="menu-item">
-<i class="fa-solid fa-image"></i>
-<p>Galeri</p>
+<i class="fa-solid fa-cloud-sun"></i>
+<p>Prediksi Musim</p>
 </div>
 
 <div class="menu-item">
-<i class="fa-solid fa-phone"></i>
-<p>Kontak</p>
+<i class="fa-solid fa-book"></i>
+<p>Materi</p>
 </div>
 
 <div class="menu-item">
-<i class="fa-solid fa-users"></i>
-<p>Kelompok Tani</p>
+<i class="fa-solid fa-file"></i>
+<p>Eviden LCS</p>
 </div>
 
 <div class="menu-item">
-<i class="fa-solid fa-tractor"></i>
-<p>Alsintan</p>
+<i class="fa-solid fa-screwdriver-wrench"></i>
+<p>Tools Laporan</p>
 </div>
 
 <div class="menu-item">
-<i class="fa-solid fa-right-to-bracket"></i>
-<p>Login</p>
+<i class="fa-solid fa-database"></i>
+<p>Data Monografi</p>
+</div>
+
+<div class="menu-item">
+<i class="fa-solid fa-people-group"></i>
+<p>Kegiatan Penyuluh</p>
 </div>
 
 </div>
