@@ -290,18 +290,19 @@ function isiDropdown(selectElement){
     
 async function loadJudulKonten() {
 
+try {
+
 const response = await fetch("judul.json");
 const data = await response.json();
 
 daftarJudul = data;
 
-} {
-            return item.id + " (" + item.platform + ": " + item.username + ") " + item.title;
-        });
+} catch (error) {
 
-    } catch (error) {
-        console.log("Tidak bisa mengambil judul konten");
-    }
+console.log("Tidak bisa mengambil judul konten");
+
+}
+
 }
 
     function getTglHariIni() {
