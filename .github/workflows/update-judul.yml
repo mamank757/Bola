@@ -19,8 +19,8 @@ jobs:
           curl -s https://dev.epusluh.id/lcs/list > page.html
 
       - name: Ambil judul konten
-        run: |
-          grep -oP '[0-9]{3}.*' page.html | head -4 > judul.txt
+  run: |
+    grep -oP '[0-9]{3}\s*\([^)]+\)\s*[^<]+' page.html | head -4 > judul.txt
 
       - name: Ubah ke JSON
         run: |
