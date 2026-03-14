@@ -1,41 +1,70 @@
-- name: Ambil Data API & Buat JSON
-        env:
-          MY_COOKIE: ${{ secrets.MY_COOKIE }}
-          MY_UA: ${{ secrets.MY_UA }}
-          MY_REFERER: ${{ secrets.MY_REFERER }}
+name: Update Judul LCS via Google Proxy
+
+on:
+  schedule:
+    - cron: "0 1 * * *" # Jam 8/9 Pagi WIB
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Ambil Data API & Buat JSON
         run: |
           python3 <<EOF
           import requests
           import json
-          import os
           import sys
 
-          headers = {
-              "User-Agent": os.getenv("MY_UA"),
-              "Cookie": os.getenv("MY_COOKIE"),
-              "Referer": os.getenv("MY_REFERER", "https://2025.epusluh.id/"),
-              "Accept": "application/json, text/plain, */*",
-              "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-              "Origin": "https://2025.epusluh.id",
-              "Sec-Fetch-Dest": "empty",
-              "Sec-Fetch-Mode": "cors",
-              "Sec-Fetch-Site": "same-origin"
-          }
-
-      # Ganti dengan URL Google Apps Script Anda
-          url = "https://script.google.com/macros/s/AKfycby8bNjUmE4GwKWX3JQlCowozJ-9-zvyFOFoD_9EebC1Spn10kjF8g6gOkPx_2boScUNQg/exec"
+          # PASTE URL GOOGLE APPS SCRIPT ANDA DI SINI
+          url = "https://script.google.com/macros/s/AKfycbynUJCPdeBbMV6Sn6R2rhloXmpVFF19h_m-MeA5k_OLjI5tEBPtH-pt4la0zmRs8K-A/exec"
 
           try:
-              # Google IP biasanya lolos 403, dan GitHub cuma ambil JSON bersih dari Google
-              response = requests.get(url, timeout=30)
-              print(f"Status HTTP dari Google: {response.status_code}")
+              # allow_redirects=True sangat penting untuk Google Script
+              response = requests.get(url, timeout=60, allow_redirects=True)
+              print(f"Status HTTP: {response.status_code}")
               
-              d = response.json()
-              items = d.get("data", [])
+              data_json = response.json()
               
-              daftar_judul = [f'{i.get("id")} ({i.get("platform")}: {i.get("username")}) {i.get("title")}' for i in items[:10]]
+              if "error" in data_json:
+                  print(f"Error dari Google: {data_json['error']}")
+                  sys.exit(1)
 
+              items = data_json.get("data", [])
+              if not items:
+                  print("Data kosong atau format berubah.")
+                  sys.exit(1)
+              
+              # Proses format judul sesuai permintaan Anda
+              daftar_judul = []
+              for item in items:
+                  teks = f'{item.get("id", "")} ({item.get("platform", "")}: {item.get("username", "")}) {item.get("title", "")}'
+                  daftar_judul.append(teks)
+
+              # Simpan ke judul.json
               with open("judul.json", "w", encoding="utf-8") as f:
                   json.dump(daftar_judul, f, indent=2, ensure_ascii=False)
               
-              print("BERHASIL: judul.json diperbarui via Proxy Google.")
+              print(f"BERHASIL: {len(daftar_judul)} judul diperbarui.")
+
+          except Exception as e:
+              print(f"Terjadi Kesalahan: {e}")
+              sys.exit(1)
+          EOF
+
+      - name: Commit dan Push
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add judul.json
+          git commit -m "sync: update judul.json via google proxy" || echo "No changes"
+          git push
