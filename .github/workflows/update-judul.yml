@@ -17,31 +17,52 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Ambil data dari API
+        # Menambahkan header User-Agent agar tidak diblokir server
         run: |
-          curl -L "https://2025.epusluh.id/api/v1/lcs?url=/lcs&page=1&per_page=10" -o data.json
+          curl -H "User-Agent: Mozilla/5.0" -L "https://2025.epusluh.id/api/v1/lcs?url=/lcs&page=1&per_page=10" -o data.json
 
-      - name: Proses JSON
+      - name: Proses JSON dan Update HTML
         run: |
           python3 <<EOF
-import json
+          import json
+          import re
 
-with open("data.json") as f:
-    d=json.load(f)
+          # 1. Load Data
+          try:
+              with open("data.json") as f:
+                  d = json.load(f)
+          except Exception:
+              d = {}
 
-judul=[]
-if d.get("data"):
-    for item in d["data"][:4]:
-        teks=f'{item["id"]} ({item["platform"]}: {item["username"]}) {item["title"]}'
-        judul.append(teks)
+          # 2. Ambil Judul
+          items = d.get("data", [])
+          judul_html = ""
+          for item in items[:4]:
+              teks = f'{item.get("id", "")} ({item.get("platform", "")}: {item.get("username", "")}) {item.get("title", "")}'
+              judul_html += f"<p>{teks}</p>\n"
 
-with open("judul.json","w") as f:
-    json.dump(judul,f,indent=2)
-EOF
+          if not judul_html:
+              judul_html = "<p>Data tidak ditemukan</p>"
+
+          # 3. Inject ke index.html
+          try:
+              with open("index.html", "r") as f:
+                  html = f.read()
+              
+              pattern = r".*?"
+              replacement = f"\n{judul_html}\n"
+              new_html = re.sub(pattern, replacement, html, flags=re.DOTALL)
+              
+              with open("index.html", "w") as f:
+                  f.write(new_html)
+          except FileNotFoundError:
+              print("File index.html tidak ditemukan, melewati proses update HTML.")
+          EOF
 
       - name: Commit perubahan
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add judul.json
-          git commit -m "update judul otomatis" || echo "tidak ada perubahan"
+          git add index.html
+          git commit -m "update judul otomatis: $(date)" || echo "tidak ada perubahan"
           git push
