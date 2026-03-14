@@ -1,8 +1,8 @@
-name: Update Judul LCS via Google Proxy
+name: Update Judul LCS Final
 
 on:
   schedule:
-    - cron: "0 1 * * *" # Jam 8/9 Pagi WIB
+    - cron: "0 1 * * *"
   workflow_dispatch:
 
 permissions:
@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Ambil Data API & Buat JSON
+      - name: Ambil Data via Google Proxy
         run: |
           python3 <<EOF
           import requests
@@ -29,32 +29,43 @@ jobs:
           url = "https://script.google.com/macros/s/AKfycbynUJCPdeBbMV6Sn6R2rhloXmpVFF19h_m-MeA5k_OLjI5tEBPtH-pt4la0zmRs8K-A/exec"
 
           try:
-              # allow_redirects=True sangat penting untuk Google Script
+              # Menggunakan allow_redirects=True karena Google Script selalu melakukan pengalihan
               response = requests.get(url, timeout=60, allow_redirects=True)
+              
               print(f"Status HTTP: {response.status_code}")
               
+              # Tampilkan isi respon untuk pengecekan jika error
+              raw_data = response.text
+              print(f"Respon Raw: {raw_data[:200]}") 
+
               data_json = response.json()
               
-              if "error" in data_json:
-                  print(f"Error dari Google: {data_json['error']}")
+              # Cek jika ada error dari sisi Google Script
+              if isinstance(data_json, dict) and "error" in data_json:
+                  print(f"Error dari Google Script: {data_json['error']}")
                   sys.exit(1)
 
-              items = data_json.get("data", [])
+              # Ambil list data
+              items = data_json.get("data", []) if isinstance(data_json, dict) else []
+              
               if not items:
-                  print("Data kosong atau format berubah.")
+                  print("Data tidak ditemukan atau format JSON tidak sesuai.")
                   sys.exit(1)
               
-              # Proses format judul sesuai permintaan Anda
+              # Format judul menjadi list teks
               daftar_judul = []
               for item in items:
-                  teks = f'{item.get("id", "")} ({item.get("platform", "")}: {item.get("username", "")}) {item.get("title", "")}'
-                  daftar_judul.append(teks)
+                  id_lcs = item.get("id", "")
+                  platform = item.get("platform", "")
+                  user = item.get("username", "")
+                  title = item.get("title", "")
+                  daftar_judul.append(f"{id_lcs} ({platform}: {user}) {title}")
 
               # Simpan ke judul.json
               with open("judul.json", "w", encoding="utf-8") as f:
                   json.dump(daftar_judul, f, indent=2, ensure_ascii=False)
               
-              print(f"BERHASIL: {len(daftar_judul)} judul diperbarui.")
+              print(f"BERHASIL: {len(daftar_judul)} judul tersimpan ke judul.json")
 
           except Exception as e:
               print(f"Terjadi Kesalahan: {e}")
