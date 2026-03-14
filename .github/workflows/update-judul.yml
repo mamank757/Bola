@@ -16,15 +16,29 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Ambil data API
+      - name: Ambil data dari API
         run: |
-          curl -s "https://2025.epusluh.id/api/v1/lcs?url=/lcs&page=1&per_page=10" > data.json
+          curl -L "https://2025.epusluh.id/api/v1/lcs?url=/lcs&page=1&per_page=10" -o data.json
 
-      - name: Ambil 4 judul
+      - name: Proses JSON
         run: |
-          cat data.json | jq '.data[0:4] | map("\(.id) (\(.platform): \(.username)) \(.title)")' > judul.json
+          python3 <<EOF
+import json
 
-      - name: Commit update
+with open("data.json") as f:
+    d=json.load(f)
+
+judul=[]
+if d.get("data"):
+    for item in d["data"][:4]:
+        teks=f'{item["id"]} ({item["platform"]}: {item["username"]}) {item["title"]}'
+        judul.append(teks)
+
+with open("judul.json","w") as f:
+    json.dump(judul,f,indent=2)
+EOF
+
+      - name: Commit perubahan
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
