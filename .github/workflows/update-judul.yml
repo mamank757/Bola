@@ -22,12 +22,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.11"
 
-      - name: Install dependency
+      - name: Install requests
         run: pip install requests
 
-      - name: Ambil dan proses data
+      - name: Ambil data dari Google Script
         run: |
           python <<EOF
           import requests
@@ -39,10 +39,10 @@ jobs:
           try:
               response = requests.get(url, timeout=60, allow_redirects=True)
 
-              print("STATUS HTTP:", response.status_code)
+              print("HTTP STATUS:", response.status_code)
 
               if "<html" in response.text.lower():
-                  print("ERROR: Google Script meminta login. Set akses ke 'Anyone'.")
+                  print("ERROR: Google Script meminta login. Pastikan akses Anyone.")
                   sys.exit(1)
 
               data_json = response.json()
@@ -54,7 +54,7 @@ jobs:
               items = data_json.get("data", [])
 
               if not items:
-                  print("Data kosong.")
+                  print("Tidak ada data.")
                   sys.exit(0)
 
               daftar_judul = []
@@ -66,14 +66,14 @@ jobs:
               with open("judul.json", "w", encoding="utf-8") as f:
                   json.dump(daftar_judul, f, indent=2, ensure_ascii=False)
 
-              print("Berhasil menyimpan", len(daftar_judul), "judul")
+              print("Sukses menyimpan", len(daftar_judul), "judul")
 
           except Exception as e:
               print("ERROR:", str(e))
               sys.exit(1)
           EOF
 
-      - name: Commit jika ada perubahan
+      - name: Commit dan push jika ada perubahan
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
@@ -81,8 +81,8 @@ jobs:
           git add judul.json
 
           if git diff --staged --quiet; then
-            echo "Tidak ada perubahan."
+            echo "Tidak ada perubahan"
           else
-            git commit -m "Auto update judul $(date)"
+            git commit -m "auto update $(date)"
             git push
           fi
