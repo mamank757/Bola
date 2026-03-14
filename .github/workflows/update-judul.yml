@@ -8,28 +8,21 @@ on:
 permissions:
   contents: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   update:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependency
-        run: pip install requests
-
-      - name: Ambil data
+      - name: Clone repository
         run: |
-          python <<EOF
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} repo
+          cd repo
+          ls
+
+      - name: Ambil data dari Google Script
+        run: |
+          cd repo
+          python3 <<EOF
           import requests, json, sys
 
           url = "https://script.google.com/macros/s/AKfycbzBTFZkf7n49aTdJ_7PdhnxL-c2uUF8PrqKxbOuUJKgfSERlJL7RpNUlbrRQKDt6ktf/exec"
@@ -39,14 +32,14 @@ jobs:
               print("HTTP:", r.status_code)
 
               if "<html" in r.text.lower():
-                  print("ERROR: Google Script meminta login.")
+                  print("ERROR: Google Script meminta login")
                   sys.exit(1)
 
               data = r.json()
               items = data.get("data", [])
 
               if not items:
-                  print("Data kosong.")
+                  print("Data kosong")
                   sys.exit(0)
 
               hasil = []
@@ -57,17 +50,18 @@ jobs:
               with open("judul.json","w",encoding="utf-8") as f:
                   json.dump(hasil,f,indent=2,ensure_ascii=False)
 
-              print("Berhasil:",len(hasil),"judul")
+              print("Sukses:",len(hasil),"judul disimpan")
 
           except Exception as e:
               print("ERROR:",e)
               sys.exit(1)
           EOF
 
-      - name: Commit jika ada perubahan
+      - name: Commit dan push
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
+          cd repo
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
 
           git add judul.json
 
