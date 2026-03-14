@@ -1,4 +1,4 @@
-name: Update Judul LCS Final
+name: Update Judul LCS Final Fix
 
 on:
   schedule:
@@ -8,8 +8,9 @@ on:
 permissions:
   contents: write
 
+# Bagian ini untuk menghilangkan peringatan Node.js 20
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   update:
@@ -26,49 +27,47 @@ jobs:
           import sys
 
           # PASTE URL GOOGLE APPS SCRIPT ANDA DI SINI
-          url = "https://script.google.com/macros/s/AKfycbynUJCPdeBbMV6Sn6R2rhloXmpVFF19h_m-MeA5k_OLjI5tEBPtH-pt4la0zmRs8K-A/exec"
+          url = "https://script.google.com/macros/s/AKfycbzBTFZkf7n49aTdJ_7PdhnxL-c2uUF8PrqKxbOuUJKgfSERlJL7RpNUlbrRQKDt6ktf/exec"
 
           try:
-              # Menggunakan allow_redirects=True karena Google Script selalu melakukan pengalihan
+              # Penting: allow_redirects harus True untuk Google Script
               response = requests.get(url, timeout=60, allow_redirects=True)
               
-              print(f"Status HTTP: {response.status_code}")
+              print(f"DEBUG: HTTP Status {response.status_code}")
               
-              # Tampilkan isi respon untuk pengecekan jika error
-              raw_data = response.text
-              print(f"Respon Raw: {raw_data[:200]}") 
+              # Cek apakah response kosong
+              if not response.text.strip():
+                  print("ERROR: Response dari Google kosong!")
+                  sys.exit(1)
 
               data_json = response.json()
               
-              # Cek jika ada error dari sisi Google Script
+              # Jika Google mengirim pesan error
               if isinstance(data_json, dict) and "error" in data_json:
-                  print(f"Error dari Google Script: {data_json['error']}")
+                  print(f"ERROR dari Google Script: {data_json['error']}")
                   sys.exit(1)
 
-              # Ambil list data
-              items = data_json.get("data", []) if isinstance(data_json, dict) else []
-              
+              # Ambil data dari JSON epusluh
+              items = data_json.get("data", [])
               if not items:
-                  print("Data tidak ditemukan atau format JSON tidak sesuai.")
+                  print("DEBUG: Data JSON yang diterima:")
+                  print(json.dumps(data_json)[:500])
+                  print("ERROR: Field 'data' tidak ditemukan atau kosong.")
                   sys.exit(1)
               
-              # Format judul menjadi list teks
+              # Susun list judul
               daftar_judul = []
               for item in items:
-                  id_lcs = item.get("id", "")
-                  platform = item.get("platform", "")
-                  user = item.get("username", "")
-                  title = item.get("title", "")
-                  daftar_judul.append(f"{id_lcs} ({platform}: {user}) {title}")
+                  teks = f'{item.get("id")} ({item.get("platform")}: {item.get("username")}) {item.get("title")}'
+                  daftar_judul.append(teks)
 
-              # Simpan ke judul.json
               with open("judul.json", "w", encoding="utf-8") as f:
                   json.dump(daftar_judul, f, indent=2, ensure_ascii=False)
               
-              print(f"BERHASIL: {len(daftar_judul)} judul tersimpan ke judul.json")
+              print(f"BERHASIL: {len(daftar_judul)} judul disimpan.")
 
           except Exception as e:
-              print(f"Terjadi Kesalahan: {e}")
+              print(f"CRITICAL ERROR: {str(e)}")
               sys.exit(1)
           EOF
 
@@ -77,5 +76,5 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git add judul.json
-          git commit -m "sync: update judul.json via google proxy" || echo "No changes"
+          git commit -m "sync: update judul.json $(date)" || echo "No changes"
           git push
