@@ -1,4 +1,4 @@
-name: Update Judul LCS 2026
+name: Update Judul LCS 2026 Fix
 
 on:
   schedule:
@@ -11,76 +11,68 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
-    # SOLUSI: Memaksa runner menggunakan Node 24 untuk menghilangkan warning
+    # Memaksa seluruh job menggunakan mesin Node 24 untuk menghilangkan warning
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          # Tambahan agar git tidak komplain tentang izin direktori
-          set-safe-directory: 'true'
 
-      - name: Ambil Data via Google Proxy
+      - name: Eksekusi Update Data
         run: |
           python3 <<EOF
           import requests
           import json
           import sys
 
-          # URL Google Apps Script Anda (Pastikan sudah dideploy sebagai 'Anyone')
+          # URL Google Apps Script Anda (Pastikan sudah Deploy sebagai 'Anyone')
           url = "https://script.google.com/macros/s/AKfycbzBTFZkf7n49aTdJ_7PdhnxL-c2uUF8PrqKxbOuUJKgfSERlJL7RpNUlbrRQKDt6ktf/exec"
 
           try:
-              # Penting: allow_redirects=True karena Google Script selalu melakukan pengalihan link
+              # Google Apps Script butuh allow_redirects=True agar tidak error 302
               response = requests.get(url, timeout=60, allow_redirects=True)
               
-              print(f"--- INFO DEBUG ---")
+              print(f"--- STATUS DEBUG ---")
               print(f"HTTP Status: {response.status_code}")
               
-              # Deteksi jika Google Script mengembalikan halaman Login (HTML) alih-alih JSON
+              # Cek jika Google mengirim halaman Login HTML karena akses belum 'Anyone'
               if "<html" in response.text.lower():
-                  print("KESALAHAN: Google Script Anda masih dalam mode privat (Minta Login).")
-                  print("SOLUSI: Di Google Script, Deploy > Manage > Edit > Who has access: Anyone.")
+                  print("KESALAHAN: Google Script minta Login. Pastikan akses di-set ke 'Anyone'.")
                   sys.exit(1)
 
               data_json = response.json()
               
-              # Cek jika ada pesan error dari sisi Google Apps Script
+              # Jika ada pesan error dari sisi Apps Script
               if isinstance(data_json, dict) and "error" in data_json:
                   print(f"ERROR GOOGLE: {data_json['error']}")
                   sys.exit(1)
 
               items = data_json.get("data", [])
               if not items:
-                  print("Pesan: Data tidak ditemukan atau kosong.")
+                  print("Data kosong, tidak ada yang perlu diupdate.")
                   sys.exit(0)
               
-              # Ambil 10 judul terbaru
+              # Proses data judul
               daftar_judul = []
-              for item in items[:10]:
-                  id_lcs = item.get("id", "")
-                  platform = item.get("platform", "")
-                  username = item.get("username", "")
-                  title = item.get("title", "")
-                  daftar_judul.append(f"{id_lcs} ({platform}: {username}) {title}")
+              for item in items:
+                  teks = f'{item.get("id")} ({item.get("platform")}: {item.get("username")}) {item.get("title")}'
+                  daftar_judul.append(teks)
 
-              # Tulis ke file judul.json
               with open("judul.json", "w", encoding="utf-8") as f:
                   json.dump(daftar_judul, f, indent=2, ensure_ascii=False)
               
               print(f"SUKSES: {len(daftar_judul)} judul tersimpan.")
 
           except Exception as e:
-              print(f"GAGAL: {str(e)}")
+              print(f"ERROR: {str(e)}")
               sys.exit(1)
           EOF
 
-      - name: Simpan Perubahan ke Repo
+      - name: Commit dan Push
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git add judul.json
-          git commit -m "sync: update judul.json $(date)" || echo "No changes"
+          git commit -m "auto-update: $(date)" || echo "No changes"
           git push
