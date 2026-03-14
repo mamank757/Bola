@@ -1,4 +1,4 @@
-name: Update Judul LCS Final Fix
+name: Update Judul LCS 2026 Fix
 
 on:
   schedule:
@@ -8,16 +8,19 @@ on:
 permissions:
   contents: write
 
+# Bagian ini adalah kunci untuk menghilangkan pesan "Node.js 20 deprecated"
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   update:
     runs-on: ubuntu-latest
-    # Menempatkan env di sini untuk memastikan Node.js 24 aktif di seluruh langkah
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        # Menghilangkan warning pada step checkout
+        with:
+          set-safe-directory: 'true'
 
       - name: Proses Data Python
         run: |
@@ -26,34 +29,31 @@ jobs:
           import json
           import sys
 
-          # URL Google Apps Script Anda
+          # Gunakan URL Google Script Anda yang sudah di-deploy sebagai "Anyone"
           url = "https://script.google.com/macros/s/AKfycbzBTFZkf7n49aTdJ_7PdhnxL-c2uUF8PrqKxbOuUJKgfSERlJL7RpNUlbrRQKDt6ktf/exec"
 
           try:
-              # Menambahkan stream=True untuk menangani data besar jika perlu
+              # Penting: allow_redirects=True wajib untuk Google Script
               response = requests.get(url, timeout=60, allow_redirects=True)
               
-              print(f"--- DEBUG INFO ---")
-              print(f"HTTP Status: {response.status_code}")
+              print(f"--- LOG DEBUG ---")
+              print(f"Status HTTP: {response.status_code}")
               
-              # Deteksi jika yang diterima adalah halaman login Google (HTML)
+              # Deteksi jika Google Script mengembalikan halaman Login (HTML) bukan JSON
               if "<html" in response.text.lower():
-                  print("KESALAHAN: Link Google Script meminta LOGIN!")
-                  print("SOLUSI: Di Google Script, klik Deploy > Manage > Edit > Who has access: 'Anyone'")
+                  print("ERROR KRITIKAL: Google Script meminta login (Akses Belum 'Anyone')")
                   sys.exit(1)
 
               data_json = response.json()
               
-              # Cek jika ada pesan error dari Google Apps Script
               if isinstance(data_json, dict) and "error" in data_json:
-                  print(f"ERROR GOOGLE SCRIPT: {data_json['error']}")
+                  print(f"ERROR DARI GOOGLE: {data_json['error']}")
                   sys.exit(1)
 
               items = data_json.get("data", [])
               if not items:
-                  print("PERINGATAN: Data kosong dari API.")
-                  # Jangan exit 1 agar tidak merah jika memang data sedang kosong
-                  sys.exit(0) 
+                  print("Data dari API kosong.")
+                  sys.exit(0)
               
               daftar_judul = []
               for item in items:
@@ -63,17 +63,17 @@ jobs:
               with open("judul.json", "w", encoding="utf-8") as f:
                   json.dump(daftar_judul, f, indent=2, ensure_ascii=False)
               
-              print(f"SUKSES: {len(daftar_judul)} judul tersimpan.")
+              print(f"BERHASIL: {len(daftar_judul)} judul disimpan ke judul.json")
 
           except Exception as e:
               print(f"ERROR: {str(e)}")
               sys.exit(1)
           EOF
 
-      - name: Commit Hasil
+      - name: Commit dan Push
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git add judul.json
-          git commit -m "auto-update judul.json" || echo "No changes"
+          git commit -m "sync: update judul.json via node24" || echo "Tidak ada perubahan"
           git push
