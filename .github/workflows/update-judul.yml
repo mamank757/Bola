@@ -11,13 +11,16 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
-    # Memaksa seluruh job menggunakan mesin Node 24 untuk menghilangkan warning
+
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install Python dependency
+        run: pip3 install requests
 
       - name: Eksekusi Update Data
         run: |
@@ -26,53 +29,56 @@ jobs:
           import json
           import sys
 
-          # URL Google Apps Script Anda (Pastikan sudah Deploy sebagai 'Anyone')
           url = "https://script.google.com/macros/s/AKfycbzBTFZkf7n49aTdJ_7PdhnxL-c2uUF8PrqKxbOuUJKgfSERlJL7RpNUlbrRQKDt6ktf/exec"
 
           try:
-              # Google Apps Script butuh allow_redirects=True agar tidak error 302
               response = requests.get(url, timeout=60, allow_redirects=True)
-              
-              print(f"--- STATUS DEBUG ---")
-              print(f"HTTP Status: {response.status_code}")
-              
-              # Cek jika Google mengirim halaman Login HTML karena akses belum 'Anyone'
+
+              print("=== DEBUG STATUS ===")
+              print("HTTP Status:", response.status_code)
+
               if "<html" in response.text.lower():
-                  print("KESALAHAN: Google Script minta Login. Pastikan akses di-set ke 'Anyone'.")
+                  print("ERROR: Google Script meminta login. Pastikan akses 'Anyone'.")
                   sys.exit(1)
 
               data_json = response.json()
-              
-              # Jika ada pesan error dari sisi Apps Script
+
               if isinstance(data_json, dict) and "error" in data_json:
-                  print(f"ERROR GOOGLE: {data_json['error']}")
+                  print("ERROR dari Google:", data_json["error"])
                   sys.exit(1)
 
               items = data_json.get("data", [])
+
               if not items:
-                  print("Data kosong, tidak ada yang perlu diupdate.")
+                  print("Data kosong, tidak ada update.")
                   sys.exit(0)
-              
-              # Proses data judul
+
               daftar_judul = []
+
               for item in items:
                   teks = f'{item.get("id")} ({item.get("platform")}: {item.get("username")}) {item.get("title")}'
                   daftar_judul.append(teks)
 
               with open("judul.json", "w", encoding="utf-8") as f:
                   json.dump(daftar_judul, f, indent=2, ensure_ascii=False)
-              
-              print(f"SUKSES: {len(daftar_judul)} judul tersimpan.")
+
+              print("SUKSES:", len(daftar_judul), "judul disimpan.")
 
           except Exception as e:
-              print(f"ERROR: {str(e)}")
+              print("ERROR:", str(e))
               sys.exit(1)
           EOF
 
-      - name: Commit dan Push
+      - name: Commit dan Push jika ada perubahan
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
+
           git add judul.json
-          git commit -m "auto-update: $(date)" || echo "No changes"
-          git push
+
+          if git diff --staged --quiet; then
+            echo "Tidak ada perubahan."
+          else
+            git commit -m "auto-update: $(date)"
+            git push
+          fi
