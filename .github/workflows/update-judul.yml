@@ -13,25 +13,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Ambil halaman LCS
+      - name: Ambil data API
         run: |
-          curl -s https://dev.epusluh.id/lcs/list > page.html
+          curl -s "https://2025.epusluh.id/api/v1/lcs?url=/lcs&page=1&per_page=10" > data.json
 
-      - name: Ambil judul konten
+      - name: Ambil 4 judul
         run: |
-          grep -oP '[0-9]{3}.*' page.html | head -4 > judul.txt
+          cat data.json | jq '.data[0:4] | map("\(.id) (\(.platform): \(.username)) \(.title)")' > judul.json
 
-      - name: Ubah ke JSON
-        run: |
-          echo "[" > judul.json
-          sed 's/^/"/;s/$/",/' judul.txt >> judul.json
-          sed -i '$ s/,$//' judul.json
-          echo "]" >> judul.json
-
-      - name: Commit perubahan
+      - name: Commit update
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
