@@ -22,29 +22,20 @@
               "Sec-Fetch-Site": "same-origin"
           }
 
-          url = "https://2025.epusluh.id/api/v1/lcs?url=/lcs&page=1&per_page=10"
+      # Ganti dengan URL Google Apps Script Anda
+          url = "https://script.google.com/macros/s/AKfycby8bNjUmE4GwKWX3JQlCowozJ-9-zvyFOFoD_9EebC1Spn10kjF8g6gOkPx_2boScUNQg/exec"
 
           try:
-              response = requests.get(url, headers=headers, timeout=30)
-              print(f"Status HTTP: {response.status_code}")
+              # Google IP biasanya lolos 403, dan GitHub cuma ambil JSON bersih dari Google
+              response = requests.get(url, timeout=30)
+              print(f"Status HTTP dari Google: {response.status_code}")
               
-              if response.status_code == 403:
-                  print("DIBLOKIR: Cloudflare menolak Cookie/UA ini. Coba ambil cookie baru saat Anda sedang aktif membuka web tersebut.")
-                  sys.exit(1)
-
-              data_json = response.json()
-              items = data_json.get("data", [])
+              d = response.json()
+              items = d.get("data", [])
               
-              daftar_judul = []
-              for item in items[:10]:
-                  teks = f'{item.get("id", "")} ({item.get("platform", "")}: {item.get("username", "")}) {item.get("title", "")}'
-                  daftar_judul.append(teks)
+              daftar_judul = [f'{i.get("id")} ({i.get("platform")}: {i.get("username")}) {i.get("title")}' for i in items[:10]]
 
               with open("judul.json", "w", encoding="utf-8") as f:
                   json.dump(daftar_judul, f, indent=2, ensure_ascii=False)
               
-              print("BERHASIL: judul.json diperbarui.")
-          except Exception as e:
-              print(f"ERROR: {e}")
-              sys.exit(1)
-          EOF
+              print("BERHASIL: judul.json diperbarui via Proxy Google.")
