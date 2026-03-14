@@ -1,4 +1,4 @@
-name: Update Judul LCS
+name: Update Judul LCS (With Auth)
 
 on:
   schedule:
@@ -16,47 +16,54 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Ambil data dari API
-        # Menambahkan header User-Agent agar tidak diblokir server
-        run: |
-          curl -H "User-Agent: Mozilla/5.0" -L "https://2025.epusluh.id/api/v1/lcs?url=/lcs&page=1&per_page=10" -o data.json
-
-      - name: Proses JSON dan Update HTML
+      - name: Ambil Data & Update HTML
+        env:
+          MY_COOKIE: ${{ secrets.MY_COOKIE }}
+          MY_UA: ${{ secrets.MY_UA }}
         run: |
           python3 <<EOF
+          import requests
           import json
           import re
+          import os
 
-          # 1. Load Data
+          # Ambil rahasia dari environment
+          cookie = os.getenv("MY_COOKIE")
+          user_agent = os.getenv("MY_UA")
+
+          url = "https://2025.epusluh.id/api/v1/lcs?url=/lcs&page=1&per_page=10"
+          headers = {
+              "User-Agent": user_agent,
+              "Cookie": cookie,
+              "Accept": "application/json"
+          }
+
           try:
-              with open("data.json") as f:
-                  d = json.load(f)
-          except Exception:
-              d = {}
-
-          # 2. Ambil Judul
-          items = d.get("data", [])
-          judul_html = ""
-          for item in items[:4]:
-              teks = f'{item.get("id", "")} ({item.get("platform", "")}: {item.get("username", "")}) {item.get("title", "")}'
-              judul_html += f"<p>{teks}</p>\n"
-
-          if not judul_html:
-              judul_html = "<p>Data tidak ditemukan</p>"
-
-          # 3. Inject ke index.html
-          try:
-              with open("index.html", "r") as f:
-                  html = f.read()
+              response = requests.get(url, headers=headers, timeout=30)
+              # Jika kena block, tampilkan status code untuk debug
+              print(f"Status: {response.status_code}")
               
-              pattern = r".*?"
-              replacement = f"\n{judul_html}\n"
-              new_html = re.sub(pattern, replacement, html, flags=re.DOTALL)
+              d = response.json()
+              items = d.get("data", [])
               
-              with open("index.html", "w") as f:
-                  f.write(new_html)
-          except FileNotFoundError:
-              print("File index.html tidak ditemukan, melewati proses update HTML.")
+              judul_html = ""
+              for item in items[:4]:
+                  # Format: id (platform: username) title
+                  teks = f'{item.get("id", "")} ({item.get("platform", "")}: {item.get("username", "")}) {item.get("title", "")}'
+                  judul_html += f"<p>{teks}</p>\n"
+          except Exception as e:
+              judul_html = f"<p>Error: Sesi mungkin habis atau web down ({str(e)})</p>"
+
+          # Update index.html
+          with open("index.html", "r") as f:
+              html = f.read()
+          
+          new_html = re.sub(r".*?", 
+                            f"\n{judul_html}\n", 
+                            html, flags=re.DOTALL)
+          
+          with open("index.html", "w") as f:
+              f.write(new_html)
           EOF
 
       - name: Commit perubahan
@@ -64,5 +71,5 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git add index.html
-          git commit -m "update judul otomatis: $(date)" || echo "tidak ada perubahan"
+          git commit -m "update data via authorized bot" || echo "no changes"
           git push
