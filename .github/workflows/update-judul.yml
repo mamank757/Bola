@@ -1,4 +1,4 @@
-name: Update Judul LCS 2026 Fix
+name: Update Judul LCS 2026
 
 on:
   schedule:
@@ -8,23 +8,28 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   update:
     runs-on: ubuntu-latest
-
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Python dependency
-        run: pip3 install requests
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
 
-      - name: Eksekusi Update Data
+      - name: Install dependency
+        run: pip install requests
+
+      - name: Ambil dan proses data
         run: |
-          python3 <<EOF
+          python <<EOF
           import requests
           import json
           import sys
@@ -34,23 +39,22 @@ jobs:
           try:
               response = requests.get(url, timeout=60, allow_redirects=True)
 
-              print("=== DEBUG STATUS ===")
-              print("HTTP Status:", response.status_code)
+              print("STATUS HTTP:", response.status_code)
 
               if "<html" in response.text.lower():
-                  print("ERROR: Google Script meminta login. Pastikan akses 'Anyone'.")
+                  print("ERROR: Google Script meminta login. Set akses ke 'Anyone'.")
                   sys.exit(1)
 
               data_json = response.json()
 
               if isinstance(data_json, dict) and "error" in data_json:
-                  print("ERROR dari Google:", data_json["error"])
+                  print("ERROR dari Apps Script:", data_json["error"])
                   sys.exit(1)
 
               items = data_json.get("data", [])
 
               if not items:
-                  print("Data kosong, tidak ada update.")
+                  print("Data kosong.")
                   sys.exit(0)
 
               daftar_judul = []
@@ -62,14 +66,14 @@ jobs:
               with open("judul.json", "w", encoding="utf-8") as f:
                   json.dump(daftar_judul, f, indent=2, ensure_ascii=False)
 
-              print("SUKSES:", len(daftar_judul), "judul disimpan.")
+              print("Berhasil menyimpan", len(daftar_judul), "judul")
 
           except Exception as e:
               print("ERROR:", str(e))
               sys.exit(1)
           EOF
 
-      - name: Commit dan Push jika ada perubahan
+      - name: Commit jika ada perubahan
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
@@ -79,6 +83,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "Tidak ada perubahan."
           else
-            git commit -m "auto-update: $(date)"
+            git commit -m "Auto update judul $(date)"
             git push
           fi
