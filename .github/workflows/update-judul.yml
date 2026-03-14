@@ -13,38 +13,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Ambil judul dari ePusluh
+      - name: Ambil halaman LCS
         run: |
-          pip install requests
-          python <<EOF
-import requests
-import json
-import re
+          curl -s https://dev.epusluh.id/lcs/list > page.html
 
-url = "https://dev.epusluh.id/lcs/list"
+      - name: Ambil judul konten
+        run: |
+          grep -oP '[0-9]{3}.*' page.html | head -4 > judul.txt
 
-r = requests.get(url)
-html = r.text
-
-# cari judul yang dimulai angka
-matches = re.findall(r'\d{3}\s*\([^)]+\)\s*[^<]+', html)
-
-judul = matches[:4]
-
-with open("judul.json","w") as f:
-    json.dump(judul,f,indent=2)
-
-print("Judul ditemukan:", judul)
-EOF
+      - name: Ubah ke JSON
+        run: |
+          echo "[" > judul.json
+          sed 's/^/"/;s/$/",/' judul.txt >> judul.json
+          sed -i '$ s/,$//' judul.json
+          echo "]" >> judul.json
 
       - name: Commit perubahan
         run: |
