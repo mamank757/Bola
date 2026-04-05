@@ -11,6 +11,8 @@
 
     <title>LCS, Tanggal, Nama Penyuluh</title>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <style>
         .col-eviden { text-align: center; }
         .col-konten textarea { font-size: 11px; }
@@ -191,12 +193,9 @@
         .footer { margin-top: 30px; padding: 20px; background: white; text-align: center; font-size: 14px; border-radius: 8px; color: #333; }
 
         @media print {
-            .judul-select, .no-print, .visitor-counter-wrapper, .controls, .action-area, .footer { display: none !important; }
-            @media print {
-    input[type="file"] {
-        display: none !important;
-    }
-}
+            .judul-select, .no-print, .visitor-counter-wrapper, .controls, .action-area, .footer, input[type="file"] { 
+                display: none !important; 
+            }
             @page { size: A4; margin: 1.5cm; }
             thead th { background: #00a651 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { background: white; padding: 0; margin: 0; }
@@ -216,13 +215,13 @@
 
 <body>
 
-<div class="visitor-counter-wrapper">
+<div class="visitor-counter-wrapper no-print">
     <a href='http://www.freevisitorcounters.com'>Counter</a>
     <script type='text/javascript' src='https://www.freevisitorcounters.com/auth.php?id=a89e5d2c48fde512d9411d388c694afb903a141d'></script>
     <script type="text/javascript" src="https://www.freevisitorcounters.com/en/home/counter/1512047/t/1"></script>
 </div>
 
-<div class="container">
+<div class="container" id="printableArea">
     <div class="header">
         <h2>LAPORAN PENDERASAN INFORMASI DAN PEMBANGUNAN PERTANIAN</h2>
         <h3>PENYULUH PERTANIAN</h3>
@@ -277,22 +276,21 @@
         <tbody id="tableBody"></tbody>
     </table>
 
-    <div class="controls">
-        <button class="btn btn-remove" type="button" onclick="removeRow()">- Hapus Baris Tabel jika hanya 2 konten hari ini </button>
-        <button class="btn btn-add" type="button" onclick="addRow(true)">+ Tambah Baris Tabel jika 4 atau lebih konten hari ini</button>
+    <div class="controls no-print">
+        <button class="btn btn-remove" type="button" onclick="removeRow()">- Hapus Baris Tabel</button>
+        <button class="btn btn-add" type="button" onclick="addRow(true)">+ Tambah Baris Tabel</button>
     </div>
 
-    <div class="action-area">
+    <div class="action-area no-print">
         <button class="btn-print" type="button" onclick="cetakLaporan()">SIMPAN/DOWNLOAD PDF</button>
     </div>
 </div>
 
-<footer class="footer">
+<footer class="footer no-print">
     copyright: King Mamank 2026
 </footer>
 
 <script>
-/* KONFIGURASI OTOMATISASI */
 let daftarJudulGlobal = [];
 
 async function sinkronisasiJudul() {
@@ -318,7 +316,6 @@ function isiOpsiSelect(selectElement) {
 
 let count = 0;
 const tableBody = document.getElementById('tableBody');
-const inputNama = document.getElementById('id_nama');
 
 function getTglHariIni() {
     const d = new Date();
@@ -366,15 +363,15 @@ function addRow(showAlert = false) {
             </div>
         </td>
         <td data-label="Like">
-            <input type="file" accept="image/*" onchange="pv(this,'l${count}')">
+            <input type="file" accept="image/*" class="no-print" onchange="pv(this,'l${count}')">
             <div class="preview-box"><img id="l${count}"></div>
         </td>
         <td data-label="Comment">
-            <input type="file" accept="image/*" onchange="pv(this,'c${count}')">
+            <input type="file" accept="image/*" class="no-print" onchange="pv(this,'c${count}')">
             <div class="preview-box"><img id="c${count}"></div>
         </td>
         <td data-label="Share">
-            <input type="file" accept="image/*" onchange="pv(this,'s${count}')">
+            <input type="file" accept="image/*" class="no-print" onchange="pv(this,'s${count}')">
             <div class="preview-box"><img id="s${count}"></div>
         </td>
     `;
@@ -406,11 +403,26 @@ function pv(input, id) {
     }
 }
 
+// FUNGSI PERBAIKAN UNTUK APK
 function cetakLaporan() {
-    const namaVal = inputNama.value.trim() || "Nama Penyuluh";
+    const element = document.getElementById('printableArea');
+    const namaVal = document.getElementById('id_nama').value.trim() || "Penyuluh";
     const tgl = getTglHariIni();
-    document.title = `LCS, ${tgl}, ${namaVal}`;
-    window.print();
+    
+    // Konfigurasi PDF
+    const opt = {
+        margin:       [1, 1, 1, 1],
+        filename:     `LCS_${tgl}_${namaVal}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'cm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // Jalankan konversi (Ini bekerja di WebView Android tanpa butuh printer sistem)
+    html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
+        // Melakukan window.print() sebagai cadangan
+        window.print();
+    }).save();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
