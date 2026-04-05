@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no, date=no, email=no, address=no">
 
-    <title>LCS, Tanggal, Nama Penyuluh</title>
+    <title>LCS Digital - Laporan Penyuluh</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
@@ -192,12 +192,13 @@
 
         .footer { margin-top: 30px; padding: 20px; background: white; text-align: center; font-size: 14px; border-radius: 8px; color: #333; }
 
+        /* Pengaturan Khusus Cetak */
         @media print {
-            .judul-select, .no-print, .visitor-counter-wrapper, .controls, .action-area, .footer, input[type="file"] { 
+            .judul-select, .no-print, .visitor-counter-wrapper, .controls, .action-area, .footer, input[type="file"], .textarea-actions { 
                 display: none !important; 
             }
             @page { size: A4; margin: 1.5cm; }
-            thead th { background: #00a651 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            thead th { background: #f2f2f2 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { background: white; padding: 0; margin: 0; }
             .container { box-shadow: none; border: none; width: 100%; padding: 0; max-width: 100%; }
             .info-section { gap: 0px 0; margin-bottom: 15px; }
@@ -333,7 +334,7 @@ async function pasteText(btn) {
         const textarea = btn.closest('.textarea-container').querySelector('textarea');
         textarea.value = text;
         autoResize(textarea);
-    } catch (err) { alert('Gagal menempel teks.'); }
+    } catch (err) { alert('Fitur tempel gagal atau tidak didukung di APK ini.'); }
 }
 
 function clearText(btn) {
@@ -355,7 +356,7 @@ function addRow(showAlert = false) {
                 <select class="no-print judul-select" onchange="const ta=this.nextElementSibling; ta.value=this.value; autoResize(ta);">
                     <option value="">List Judul Konten</option>
                 </select>
-                <textarea oninput="autoResize(this)" placeholder="Pilih di atas atau ketik/paste manual"></textarea>
+                <textarea oninput="autoResize(this)" placeholder="Pilih di atas atau ketik manual"></textarea>
                 <div class="textarea-actions no-print">
                     <button type="button" class="btn-action btn-clear" onclick="clearText(this)">🗑️</button>
                     <button type="button" class="btn-action btn-paste" onclick="pasteText(this)">📋</button>
@@ -403,72 +404,35 @@ function pv(input, id) {
     }
 }
 
-// FUNGSI PERBAIKAN UNTUK APK
+// FUNGSI UTAMA CETAK UNTUK APK
 function cetakLaporan() {
+    const element = document.getElementById('printableArea');
     const namaVal = document.getElementById('id_nama').value.trim() || "Penyuluh";
     const tgl = getTglHariIni();
     
-    // 1. Ambil konten yang ingin dicetak
-    const konten = document.getElementById('printableArea').innerHTML;
-    
-    // 2. Buat jendela baru (Iframe/Window) khusus untuk cetak
-    const winPrint = window.open('', '', 'left=0,top=0,width=800,height=900,toolbar=0,scrollbars=0,status=0');
-    
-    // 3. Masukkan CSS khusus ke dalam jendela cetak tersebut
-    // Kita memaksa CSS agar menganggap ini adalah Media Print
-    winPrint.document.write(`
-        <html>
-            <head>
-                <title>LCS, ${tgl}, ${namaVal}</title>
-                <style>
-                    body { font-family: 'Times New Roman', serif; background: white; padding: 20px; }
-                    .header { text-align: center; margin-bottom: 20px; }
-                    .header h2, .header h3 { margin: 2px 0; text-transform: uppercase; font-size: 14pt; }
-                    
-                    .info-section { display: block; margin-bottom: 20px; }
-                    .info-section label { font-weight: bold; width: 150px; display: inline-block; }
-                    
-                    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                    th, td { border: 1px solid black; padding: 8px; text-align: center; vertical-align: middle; font-size: 10pt; }
-                    th { background: #f2f2f2 !important; -webkit-print-color-adjust: exact; }
-                    
-                    .preview-box { border: 1px solid #000; width: 100px; height: 130px; margin: 5px auto; overflow: hidden; }
-                    .preview-box img { width: 100%; height: 100%; object-fit: cover; }
-                    
-                    /* Hilangkan elemen input yang tidak perlu */
-                    .no-print, input[type="file"], select, button, .textarea-actions { display: none !important; }
-                    
-                    /* Pastikan input text dan textarea terlihat sebagai teks biasa */
-                    input[type="text"], input[type="date"], textarea { 
-                        border: none !important; 
-                        width: auto; 
-                        font-family: inherit; 
-                        font-size: inherit;
-                        background: transparent !important;
-                    }
-                    textarea { width: 100%; min-height: 50px; overflow: hidden; resize: none; }
-                    
-                    @page { size: A4; margin: 1cm; }
-                </style>
-            </head>
-            <body>
-                ${konten}
-            </body>
-        </html>
-    `);
+    // Opsi konfigurasi untuk html2pdf
+    const opt = {
+        margin:       [0.5, 0.5, 0.5, 0.5],
+        filename:     `LCS_${tgl}_${namaVal}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'cm', format: 'a4', orientation: 'portrait' }
+    };
 
-    winPrint.document.close();
-    
-    // 4. Beri sedikit waktu agar gambar/konten dimuat, lalu panggil fungsi print
-    setTimeout(function() {
-        winPrint.focus();
-        winPrint.print();
-        winPrint.close();
-    }, 500);
+    // Proses konversi dan simpan
+    html2pdf().set(opt).from(element).save().then(() => {
+        // Sebagai cadangan, jika APK mendukung Print Spooler sistem
+        setTimeout(() => { window.print(); }, 500);
+    }).catch(err => {
+        console.error("Error cetak:", err);
+        // Jika html2pdf gagal, coba print biasa
+        window.print();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
     await sinkronisasiJudul();
+    // Inisialisasi baris awal
     addRow(); addRow(); addRow();
 });
 </script>
