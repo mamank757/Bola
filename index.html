@@ -461,29 +461,31 @@ function cetakLaporan() {
     const namaVal = document.getElementById('id_nama').value.trim() || "Penyuluh";
     const d = new Date();
     const tgl = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-    
-    // Konfigurasi PDF yang lebih optimal untuk HP
+
+    // 1. Sembunyikan elemen yang tidak perlu secara manual sebelum proses
+    const elemenDibuang = document.querySelectorAll('.no-print, .controls, .action-area, .visitor-counter-wrapper, .floating-container');
+    elemenDibuang.forEach(el => el.style.display = 'none');
+
+    // 2. Opsi Konfigurasi agar hasil HP = Hasil Desktop
     const opt = {
-        margin:       [0.5, 0.5], // Atas, Bawah (dalam cm)
+        margin:       [0.7, 0.5, 0.7, 0.5], // Atas, Kiri, Bawah, Kanan (cm)
         filename:     `Laporan_LCS_${namaVal}_${tgl}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
-            scale: 2, 
-            useCORS: true,
-            logging: false,
-            // Baris di bawah ini memastikan elemen .no-print TIDAK ikut ter-download
-            ignoreElements: (el) => el.classList.contains('no-print') || el.classList.contains('controls') || el.classList.contains('action-area')
+            scale: 2,           // Meningkatkan ketajaman teks
+            useCORS: true,      // Agar gambar eksternal muncul
+            letterRendering: true,
+            windowWidth: 1100   // MEMAKSA tampilan lebar (desktop) agar tabel tidak pecah
         },
         jsPDF:        { unit: 'cm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Jalankan konversi dan simpan
-    html2pdf().set(opt).from(element).save();
+    // 3. Jalankan Konversi
+    html2pdf().set(opt).from(element).save().then(() => {
+        // 4. Munculkan kembali tombol setelah selesai download
+        elemenDibuang.forEach(el => el.style.display = '');
+    });
 }
-document.addEventListener('DOMContentLoaded', async () => {
-    await sinkronisasiJudul();
-    addRow(); addRow(); addRow();
-});
 </script>
 
 </body>
