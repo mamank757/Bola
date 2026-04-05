@@ -405,24 +405,66 @@ function pv(input, id) {
 
 // FUNGSI PERBAIKAN UNTUK APK
 function cetakLaporan() {
-    const element = document.getElementById('printableArea');
     const namaVal = document.getElementById('id_nama').value.trim() || "Penyuluh";
     const tgl = getTglHariIni();
     
-    // Konfigurasi PDF
-    const opt = {
-        margin:       [1, 1, 1, 1],
-        filename:     `LCS_${tgl}_${namaVal}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'cm', format: 'a4', orientation: 'portrait' }
-    };
+    // 1. Ambil konten yang ingin dicetak
+    const konten = document.getElementById('printableArea').innerHTML;
+    
+    // 2. Buat jendela baru (Iframe/Window) khusus untuk cetak
+    const winPrint = window.open('', '', 'left=0,top=0,width=800,height=900,toolbar=0,scrollbars=0,status=0');
+    
+    // 3. Masukkan CSS khusus ke dalam jendela cetak tersebut
+    // Kita memaksa CSS agar menganggap ini adalah Media Print
+    winPrint.document.write(`
+        <html>
+            <head>
+                <title>LCS, ${tgl}, ${namaVal}</title>
+                <style>
+                    body { font-family: 'Times New Roman', serif; background: white; padding: 20px; }
+                    .header { text-align: center; margin-bottom: 20px; }
+                    .header h2, .header h3 { margin: 2px 0; text-transform: uppercase; font-size: 14pt; }
+                    
+                    .info-section { display: block; margin-bottom: 20px; }
+                    .info-section label { font-weight: bold; width: 150px; display: inline-block; }
+                    
+                    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                    th, td { border: 1px solid black; padding: 8px; text-align: center; vertical-align: middle; font-size: 10pt; }
+                    th { background: #f2f2f2 !important; -webkit-print-color-adjust: exact; }
+                    
+                    .preview-box { border: 1px solid #000; width: 100px; height: 130px; margin: 5px auto; overflow: hidden; }
+                    .preview-box img { width: 100%; height: 100%; object-fit: cover; }
+                    
+                    /* Hilangkan elemen input yang tidak perlu */
+                    .no-print, input[type="file"], select, button, .textarea-actions { display: none !important; }
+                    
+                    /* Pastikan input text dan textarea terlihat sebagai teks biasa */
+                    input[type="text"], input[type="date"], textarea { 
+                        border: none !important; 
+                        width: auto; 
+                        font-family: inherit; 
+                        font-size: inherit;
+                        background: transparent !important;
+                    }
+                    textarea { width: 100%; min-height: 50px; overflow: hidden; resize: none; }
+                    
+                    @page { size: A4; margin: 1cm; }
+                </style>
+            </head>
+            <body>
+                ${konten}
+            </body>
+        </html>
+    `);
 
-    // Jalankan konversi (Ini bekerja di WebView Android tanpa butuh printer sistem)
-    html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
-        // Melakukan window.print() sebagai cadangan
-        window.print();
-    }).save();
+    winPrint.document.close();
+    
+    // 4. Beri sedikit waktu agar gambar/konten dimuat, lalu panggil fungsi print
+    setTimeout(function() {
+        winPrint.focus();
+        winPrint.print();
+        winPrint.close();
+    }, 500);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
